@@ -103,8 +103,41 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
-export const logout = (req: Request, res: Response) => {
-  res.clearCookie("token");
+export const demoLogin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const demoEmail = "demo@aicareermentor.com";
+    let user = await User.findOne({ email: demoEmail }).select("+password");
+
+    if (!user) {
+      const hashedPassword = await bcrypt.hash("demo1234", 12);
+      user = new User({
+        fullname: "Demo Candidate",
+        email: demoEmail,
+        password: hashedPassword,
+        provider: "local",
+        isVerified: true,
+        skills: ["JavaScript", "React", "Node.js", "TypeScript", "MongoDB"],
+        experience: ["Frontend Developer", "Intern"],
+        education: ["B.Tech Computer Science"],
+      });
+      await user.save();
+    }
+
+    const token = jwt.sign({ id: user._id }, config.jwt.secret, { expiresIn: config.jwt.expiresIn as any });
+    const refreshToken = jwt.sign({ id: user._id }, config.jwt.secret, { expiresIn: "30d" });
+
+    res.json({
+      success: true,
+      token,
+      refreshToken,
+      user: { id: user._id, fullname: user.fullname, email: user.email, role: user.role },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const logout = (req: Request, res: Response) => {  res.clearCookie("token");
   res.clearCookie("refreshToken");
   res.json({ success: true, message: "Logged out successfully" });
 };

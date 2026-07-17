@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "./auth/middleware";
 import { Conversation, Message } from "../models";
+import { ChatTool } from "../tools/chat";
 
 const router = express.Router();
 
@@ -48,16 +49,42 @@ router.post("/:id/messages", async (req: any, res) => {
     if (!conversation) {
       return res.status(404).json({ success: false, message: "Conversation not found" });
     }
-    const message = new Message({
+    const userMessage = new Message({
       conversationId: conversation._id,
       content: req.body.content,
       role: "user",
       sender: req.user._id,
     });
-    await message.save();
-    conversation.messages.push(message._id);
+    await userMessage.save();
+    conversation.messages.push(userMessage._id);
+
+    const history = await Message.find({ conversationId: conversation._id })
+      .sort({ createdAt: 1 })
+      .limit(20)
+      .lean();
+
+    const tool = new ChatTool();
+    const result = await tool.execute({
+      userId: req.user._id,
+      message: req.body.content,
+      history: history.map((m: any) => ({ role: m.role, content: m.content })),
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ success: false, error: result.error });
+    }
+
+    const assistantMessage = new Message({
+      conversationId: conversation._id,
+      content: result.data.content,
+      role: "assistant",
+      sender: "ai",
+    });
+    await assistantMessage.save();
+    conversation.messages.push(assistantMessage._id);
     await conversation.save();
-    res.status(201).json({ success: true, data: message });
+
+    res.status(201).json({ success: true, data: { user: userMessage, assistant: assistantMessage } });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

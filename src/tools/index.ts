@@ -9,3 +9,4 @@ export { JobTool } from "./job";
 export { AnalyticsTool } from "./analytics";
 export { InterviewTool } from "./interview";
 export { LearningTool } from "./learning";
+export { ChatTool } from "./chat";

@@ -28,7 +28,7 @@ export default {
     "mongodb+srv://username:password@cluster0.mongodb.net/ai-career-mentor?retryWrites=true&w=majority",
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || "",
-    model: "models/gemini-2.5-flash",
+    model: "gemini-flash-lite-latest",
     temperature: 0.7,
     maxOutputTokens: 8192,
   },

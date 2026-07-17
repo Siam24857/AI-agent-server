@@ -1,84 +1,84 @@
 import { BaseTool, ToolResult } from "./base";
 import { User, LearningRoadmap } from "../models";
-
-interface RoadmapResource {
-  type: string;
-  title: string;
-  url: string;
-}
-
-interface WeekPlan {
-  week: number;
-  title: string;
-  objectives: string[];
-  tasks: string[];
-  resources: RoadmapResource[];
-  estimatedHours: number;
-}
-
-interface RoadmapData {
-  title: string;
-  weekPlan: WeekPlan[];
-  currentWeek: number;
-  status: "active" | "completed" | "archived";
-}
+import geminiService from "../services/gemini";
 
 export class RoadmapTool extends BaseTool {
   name = "roadmap";
-  description = "Generate personalized learning roadmaps based on career goals and current skills";
+  description = "Generate personalized AI learning roadmaps based on career goals and current skills";
 
   async execute(parameters: any): Promise<ToolResult> {
     try {
-      const { userId, targetRole, timeframe = "6 months" } = parameters;
+      const { userId, targetRole, timeframe = "6 months", currentRole } = parameters;
 
-      const user: any = await User.findById(userId);
+      const user: any = await User.findById(userId).lean();
       if (!user) {
         return { success: false, error: "User not found" };
       }
 
-      const roadmap: RoadmapData = {
-        title: `Learning Path for ${targetRole}`, 
-        weekPlan: [],
-        currentWeek: 1,
-        status: "active",
-      };
+      const profile = `Current role: ${currentRole || user.role || "not specified"}
+Skills: ${(user.skills || []).join(", ") || "none listed"}
+Experience: ${(user.experience || []).join(", ") || "none listed"}
+Education: ${(user.education || []).join(", ") || "none listed"}`;
 
-      for (let week = 1; week <= 12; week++) {
-        const weekPlan: WeekPlan = {
-          week,
-          title: `Week ${week} Learning Plan`,
-          objectives: [],
-          tasks: [],
-          resources: [],
-          estimatedHours: 10,
-        };
+      const prompt = `You are an elite career coach and learning designer.
+Create a detailed, personalized learning roadmap for this candidate.
 
-        if (user.skills?.includes("JavaScript") && week === 1) {
-          weekPlan.objectives.push("Build a JavaScript project");
-          weekPlan.tasks.push("Create a portfolio website");
-          weekPlan.resources.push({
-            type: "project", 
-            title: "Portfolio Project", 
-            url: "https://example.com/portfolio" 
-          });
-        }
+CANDIDATE PROFILE:
+${profile}
 
-        roadmap.weekPlan.push(weekPlan);
-      }
+GOAL: Become a ${targetRole}
+TIMEFRAME: ${timeframe}
 
-      const savedRoadmap = new LearningRoadmap({
-        userId,
-        title: roadmap.title,
-        weekPlan: roadmap.weekPlan,
-        currentWeek: 1,
-        status: "active",
+Return ONLY valid JSON:
+{
+  "title": <string>,
+  "overview": <string>,
+  "currentSkills": [<string>],
+  "requiredSkills": [<string>],
+  "gaps": [<string>],
+  "timeline": <string>,
+  "weeks": [
+    {
+      "week": <number>,
+      "title": <string>,
+      "objectives": [<string>],
+      "tasks": [<string>],
+      "resources": [{ "type": "course"|"article"|"project"|"video", "title": <string>, "url": <string> }],
+      "estimatedHours": <number>
+    }
+  ],
+  "milestones": [{ "title": <string>, "week": <number> }],
+  "resources": [{ "type": <string>, "title": <string>, "url": <string> }]
+}
+Provide 8-12 weeks. Use real, well-known learning resources (official docs, freeCodeCamp, Coursera, YouTube, MDN, etc.).`;
+
+      const plan = await geminiService.generateJSON(prompt, {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+        systemInstruction: "You are a world-class career coach. Respond with valid JSON only.",
       });
 
-      await savedRoadmap.save();
+      const roadmap = new LearningRoadmap({
+        userId,
+        title: plan.title || `Learning Path for ${targetRole}`,
+        weekPlan: plan.weeks || [],
+        currentWeek: 1,
+        status: "active",
+        plan: {
+          currentSkills: plan.currentSkills || [],
+          requiredSkills: plan.requiredSkills || [],
+          gaps: plan.gaps || [],
+          learningPath: plan.weeks || [],
+          timeline: plan.timeline || timeframe,
+          milestones: plan.milestones || [],
+          resources: plan.resources || [],
+        },
+      });
 
-      return { success: true, data: savedRoadmap };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
+      await roadmap.save();
+      return { success: true, data: roadmap };
+    } catch (error: any) {
+      return { success: false, error: error.message };
     }
   }
 }

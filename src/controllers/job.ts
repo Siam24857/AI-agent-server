@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
   try {
-    const { category, location, type, experience, search } = req.query;
+    const { category, location, type, experience, search, sort, page = "1", limit = "9" } = req.query;
     const filter: any = { status: "active" };
     if (category) filter.category = category;
     if (location) filter.location = location;
@@ -18,8 +18,33 @@ router.get("/", async (req, res) => {
         { company: { $regex: search, $options: "i" } },
       ];
     }
-    const jobs = await Job.find(filter).populate("postedBy", "fullname avatar").sort({ createdAt: -1 });
-    res.json({ success: true, data: jobs, count: jobs.length });
+
+    const sortMap: any = {
+      latest: { createdAt: -1 },
+      salary: { salary: 1 },
+      title: { title: 1 },
+    };
+    const sortOption = sortMap[sort as string] || { createdAt: -1 };
+
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(50, parseInt(limit as string) || 9);
+    const skip = (pageNum - 1) * limitNum;
+
+    const total = await Job.countDocuments(filter);
+    const jobs = await Job.find(filter)
+      .populate("postedBy", "fullname avatar")
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limitNum);
+
+    res.json({
+      success: true,
+      data: jobs,
+      count: jobs.length,
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
