@@ -22,6 +22,7 @@ import roadmapRoutes from "./controllers/roadmap";
 import interviewRoutes from "./controllers/interview";
 import historyRoutes from "./controllers/history";
 import dashboardRoutes from "./controllers/dashboard";
+import blogRoutes from "./controllers/blog";
 
 const app = express();
 
@@ -59,6 +60,7 @@ app.use("/api/roadmap", roadmapRoutes);
 app.use("/api/interview", interviewRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/blogs", blogRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({ success: true, message: "Server is running" });

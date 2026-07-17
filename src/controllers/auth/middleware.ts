@@ -25,7 +25,14 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
     req.user = user;
     next();
-  } catch (error) {
+  } catch (error: any) {
+    if (
+      error?.name === "JsonWebTokenError" ||
+      error?.name === "TokenExpiredError" ||
+      error?.name === "NotBeforeError"
+    ) {
+      return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    }
     next(error);
   }
 };

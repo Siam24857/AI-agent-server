@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import { protect, isAdmin } from "./auth/middleware";
 import { Job, Application } from "../models";
 
@@ -74,15 +75,35 @@ router.post("/", protect, isAdmin, async (req: any, res) => {
 
 router.post("/:id/apply", protect, async (req: any, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid job id" });
+    }
+
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    const existing = await Application.findOne({
+      jobId: req.params.id,
+      userId: req.user._id,
+    });
+    if (existing) {
+      return res.status(409).json({ success: false, message: "You have already applied to this job" });
+    }
+
     const application = new Application({
       jobId: req.params.id,
       userId: req.user._id,
-      resumeUrl: req.body.resumeUrl,
+      resumeUrl: req.body.resumeUrl || req.user.resumeUrl || "N/A",
       coverLetter: req.body.coverLetter,
     });
     await application.save();
     res.status(201).json({ success: true, data: application });
   } catch (error: any) {
+    if (error?.name === "ValidationError") {
+      return res.status(400).json({ success: false, error: error.message });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 });
