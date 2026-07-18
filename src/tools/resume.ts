@@ -1,8 +1,8 @@
 import { BaseTool, ToolResult } from "./base";
 import pdfParse from "pdf-parse";
-import fs from "fs";
 import { ResumeAnalysis, User } from "../models";
 import geminiService from "../services/gemini";
+import { uploadBuffer } from "../services/cloudinary";
 
 export class ResumeTool extends BaseTool {
   name = "resume";
@@ -10,14 +10,13 @@ export class ResumeTool extends BaseTool {
 
   async execute(parameters: any): Promise<ToolResult> {
     try {
-      const { resumeUrl, filename, userId, targetRole } = parameters;
+      const { resumeBuffer, filename, userId, targetRole } = parameters;
 
-      if (!fs.existsSync(resumeUrl)) {
-        return { success: false, error: "Uploaded file not found on server" };
+      if (!resumeBuffer || !Buffer.isBuffer(resumeBuffer)) {
+        return { success: false, error: "No resume file provided" };
       }
 
-      const pdfData = fs.readFileSync(resumeUrl);
-      const pdfContent = await pdfParse(pdfData);
+      const pdfContent = await pdfParse(resumeBuffer);
       const text = pdfContent.text || "";
 
       if (text.trim().length < 50) {
@@ -74,21 +73,22 @@ Return ONLY valid JSON with this exact shape:
         summary: analysis.summary || "",
       };
 
+      let originalUrl = "";
+      try {
+        const uploaded = await uploadBuffer(resumeBuffer, filename || "resume");
+        originalUrl = uploaded.url;
+      } catch {
+        // upload is best-effort; analysis still proceeds without a stored file
+      }
+
       const newAnalysis = new ResumeAnalysis({
         userId,
         filename,
-        originalUrl: resumeUrl,
+        originalUrl,
         analysis: normalized,
       });
 
       await newAnalysis.save();
-
-      // cleanup uploaded file
-      try {
-        fs.unlinkSync(resumeUrl);
-      } catch {
-        // ignore cleanup errors
-      }
 
       return { success: true, data: newAnalysis, extractedText: text };
     } catch (error: any) {
