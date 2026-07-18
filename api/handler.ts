@@ -1,6 +1,4 @@
-import express, { Request, Response } from 'express';
-
-const { app } = express();
+import { Request, Response } from 'express';
 
 module.exports = async function handler(req: Request, res: Response) {
   res.setHeader('Access-Control-Allow-Origin', '*');
