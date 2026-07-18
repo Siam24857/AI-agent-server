@@ -1,6 +1,6 @@
-const { app } = require('./dist/server');
+const { app } = require('./dist/src/server');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     await app(req, res);
   } catch (error) {
