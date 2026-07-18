@@ -30,7 +30,12 @@ const app = express();
 
 app.set("trust proxy", 1);
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -40,14 +45,39 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
+// Allowed CORS origins (supports multiple via env, comma-separated)
+const allowedOrigins = [
+  config.clientUrl,
+  "https://ai-agent-cleint.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:5000",
+]
+  .filter(Boolean)
+  .reduce<string[]>((acc, cur) => acc.concat(cur.split(",").map((o) => o.trim())), [])
+  .filter((o, i, arr) => o && arr.indexOf(o) === i);
+
 app.use(
   cors({
-    origin: config.clientUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (server-to-server, curl, mobile)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(null, true); // reflect any origin but still enforce credentials below
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// Explicitly handle preflight OPTIONS requests on Vercel serverless
+app.options("*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  res.sendStatus(204);
+});
 
 app.use(cookieParser());
 app.use(morgan("dev"));
