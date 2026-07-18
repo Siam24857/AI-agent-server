@@ -11,6 +11,8 @@ import {
   demoLogin,
 } from "./authController";
 import passport from "../../config/passport";
+import config from "../../config/config";
+import { generateToken } from "../../utils/helper";
 
 const router = express.Router();
 
@@ -47,9 +49,13 @@ router.get(
 
 router.get(
   "/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/login" }),
-  (req, res) => {
-    res.redirect("/");
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: `${config.clientUrl}/login`,
+  }),
+  (req: any, res) => {
+    const token = generateToken(req.user._id.toString());
+    res.redirect(`${config.clientUrl}/login?token=${token}`);
   }
 );
 

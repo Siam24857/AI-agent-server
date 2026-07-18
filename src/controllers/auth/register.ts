@@ -39,7 +39,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     await sendEmail(
       email,
       "Verify your email",
-      `Please click on the link to verify your email: http://localhost:3000/verify/${verificationToken}`
+      `Please click on the link to verify your email: ${config.clientUrl}/verify/${verificationToken}`
     );
 
     res.status(201).json({ success: true, message: "User registered successfully. Please check your email for verification." });
@@ -146,7 +146,7 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
     await sendEmail(
       email,
       "Password reset",
-      `Please click on the link to reset your password: http://localhost:3000/reset-password/${resetToken}`
+      `Please click on the link to reset your password: ${config.clientUrl}/reset-password/${resetToken}`
     );
 
     res.json({ success: true, message: "Password reset link sent to email" });

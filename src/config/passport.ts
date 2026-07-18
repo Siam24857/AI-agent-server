@@ -2,8 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { User } from "../models";
+import config from "./config";
 
-const googleCallbackUrl = process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback";
+const googleCallbackUrl = config.google.callbackUrl;
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
