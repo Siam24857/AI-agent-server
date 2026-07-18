@@ -26,6 +26,8 @@ import blogRoutes from "./controllers/blog";
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 app.use(helmet());
 
 const limiter = rateLimit({
@@ -68,8 +70,11 @@ app.get("/api/health", (req: Request, res: Response) => {
 
 connectDB();
 
-const PORT = config.port || 5000;
+if (!process.env.VERCEL) {
+  const PORT = config.port || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+export default app;
