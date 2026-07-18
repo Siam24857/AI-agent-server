@@ -5,7 +5,14 @@ import { ResumeTool } from "../tools";
 import { ResumeAnalysis } from "../models";
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+
+// Use memory storage to avoid file system operations in Vercel
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});
 
 router.use(protect);
 
@@ -14,17 +21,26 @@ router.post("/analyze", upload.single("resume"), async (req: any, res) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: "No resume file uploaded" });
     }
+
     const tool = new ResumeTool();
     const result = await tool.execute({
-      resumeUrl: req.file.path,
+      resumeBuffer: req.file.buffer,
       filename: req.file.originalname,
       userId: req.user._id,
+      contentType: req.file.mimetype,
     });
+
     if (!result.success) {
       return res.status(500).json({ success: false, error: result.error });
     }
-    res.status(201).json({ success: true, data: result.data, extractedText: result.extractedText });
+
+    res.status(201).json({
+      success: true,
+      data: result.data,
+      extractedText: result.extractedText,
+    });
   } catch (error: any) {
+    console.error('Resume upload error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
