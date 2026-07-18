@@ -24,6 +24,7 @@ import interviewRoutes from "./controllers/interview";
 import historyRoutes from "./controllers/history";
 import dashboardRoutes from "./controllers/dashboard";
 import blogRoutes from "./controllers/blog";
+import statsRoutes from "./controllers/stats";
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use("/api/interview", interviewRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/blogs", blogRoutes);
+app.use("/api/stats", statsRoutes);
 
 app.get("/api/health", (req: Request, res: Response) => {
   res.status(200).json({ success: true, message: "Server is running" });
