@@ -11,6 +11,7 @@ dotenv.config();
 
 import config from "./config/config";
 import connectDB from "./database/connection";
+import passport from "./config/passport";
 
 import authRoutes from "./controllers/auth";
 import userRoutes from "./controllers/user";
@@ -51,6 +52,7 @@ app.use(cookieParser());
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(passport.initialize());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

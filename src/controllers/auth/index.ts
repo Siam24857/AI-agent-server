@@ -8,7 +8,6 @@ import {
   forgotPassword,
   resetPassword,
   verifyEmail,
-  demoLogin,
 } from "./authController";
 import passport from "../../config/passport";
 import config from "../../config/config";
@@ -36,7 +35,6 @@ router.post(
 );
 
 router.post("/logout", logout);
-router.post("/demo-login", demoLogin);
 router.post("/refresh-token", refreshToken);
 router.post("/forgot-password", [body("email").isEmail().withMessage("Valid email is required")], forgotPassword);
 router.post("/reset-password/:token", [body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters")], resetPassword);
