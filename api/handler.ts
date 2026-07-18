@@ -1,4 +1,1 @@
-module.exports = function handler(req, res) {
-  const { app } = require('./dist/src/server');
-  app(req, res);
-}
+// This file is no longer needed - the main server.js handles all API requests
